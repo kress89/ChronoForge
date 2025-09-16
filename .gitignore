@@ -1,0 +1,27 @@
+# Build outputs
+**/target/
+out/
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Logs & temp
+logs/
+**/*.log
+*.tmp
+
+# Local env files
+**/.env
+
+# Local Spring properties (do not commit real creds)
+cf-api/src/main/resources/application.properties
+cf-api/src/main/resources/application-*.properties
