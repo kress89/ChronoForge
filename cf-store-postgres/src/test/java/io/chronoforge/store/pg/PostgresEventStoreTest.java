@@ -46,7 +46,8 @@ class PostgresEventStoreTest {
                 "DOC_SET",
                 Instant.parse("2025-09-16T12:00:00Z"),
                 VectorClock.from(Map.of("nodeA", 1L)),
-                Map.of("foo", "bar")
+                Map.of("foo", "bar"),
+                "api"
         );
     }
 

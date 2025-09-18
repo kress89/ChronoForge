@@ -46,7 +46,7 @@ public final class PostgresEventStore implements EventStore {
                     e.entityId().value(),
                     Timestamp.from(e.observedAt()),
                     e.type(),
-                    node(),                                   // capture logical node
+                    e.node(),                                   // capture logical node
                     toJson(e.clock().snapshot()),
                     toJson(e.payload()),
                     hash
@@ -128,9 +128,10 @@ public final class PostgresEventStore implements EventStore {
 
             Map<String, Long> clock = readJson(rs.getString("clock"));
             Map<String, Object> payload = readJsonObj(rs.getString("payload"));
+            String node = rs.getString("node");
 
             var vc = VectorClock.from(clock);
-            return new TemporalEvent(entityId, type, at, vc, payload);
+            return new TemporalEvent(entityId, type, at, vc, payload, node);
         };
     }
 

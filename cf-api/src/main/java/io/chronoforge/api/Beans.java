@@ -3,6 +3,7 @@ package io.chronoforge.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.chronoforge.store.EventStore;
 import io.chronoforge.store.InMemoryEventStore;
+import io.chronoforge.store.pg.DocSnapshotRepository;
 import io.chronoforge.store.pg.PostgresEventStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,4 +23,7 @@ public class Beans {
     EventStore postgresStore(JdbcTemplate jdbc, ObjectMapper mapper) {
         return new PostgresEventStore(jdbc, mapper);
     }
+
+    @Bean @Profile("pg")
+    DocSnapshotRepository docSnapshots(JdbcTemplate jdbc, ObjectMapper mapper) { return new DocSnapshotRepository(jdbc, mapper); }
 }

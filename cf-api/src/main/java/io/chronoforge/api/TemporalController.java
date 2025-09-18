@@ -18,61 +18,36 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/time")
 public class TemporalController {
-
     private final EventStore store;
+    public TemporalController(EventStore store){ this.store = store; }
 
-    public TemporalController(EventStore store) {
-        this.store = store;
-    }
+    record AppendReq(String type, Map<String,Object> payload, String node){}
 
     @PostMapping("/{id}/events")
-    public ResponseEntity<?> append(@PathVariable("id") String id,
-                                    @RequestBody AppendReq req,
-                                    @RequestHeader(value = "X-CF-Seed", required = false) Long headerSeed,
-                                    @RequestParam(value = "seed", required = false) Long querySeed) {
-
+    public ResponseEntity<?> append(@PathVariable("id") String id, @RequestBody AppendReq req){
         var entityId = new TemporalId(UUID.fromString(id));
-        var seed = headerSeed != null ? headerSeed : querySeed;
-
-        Runnable writer = () -> {
-            var effectiveNode = (req.node() == null || req.node().isBlank())
-                    ? Determinism.node()
-                    : req.node();
-
-            var vc = new VectorClock().tick(effectiveNode);
-            var payload = req.payload() == null ? Map.<String, Object>of() : req.payload();
-
-            // Create the event with deterministic time
-            var ev = new TemporalEvent(
-                    entityId,
-                    req.type(),
-                    Determinism.now(),
-                    vc,
-                    payload
-            );
-
-            store.append(List.of(ev));
-        };
-
-        if (seed != null) {
-            // Run this append under a deterministic scope if a seed is provided
-            Determinism.withDeterminism(req.node(), seed, () -> {
-                writer.run();
-                return null;
-            });
-        } else {
-            writer.run();
-        }
-
-        return ResponseEntity.accepted().body(Map.of("status", "queued"));
+        var node = (req.node() == null || req.node().isBlank()) ? Determinism.node() : req.node();
+        var vc = new VectorClock().tick(node);
+        var ev = new TemporalEvent(
+                entityId,
+                req.type(),
+                Determinism.now(),
+                vc,
+                req.payload() == null ? Map.of() : req.payload(),
+                node
+        );
+        store.append(List.of(ev));
+        return ResponseEntity.accepted().body(Map.of("status","queued"));
     }
+
+    public record EventView(String entityId, String type, Instant observedAt,
+                            Map<String,Long> clock, Map<String,Object> payload, String node) {}
 
     @GetMapping("/{id}/events")
     public ResponseEntity<List<EventView>> read(@PathVariable("id") String id,
                                                 @RequestParam(name = "asOf", required = false) String asOf) {
         var entityId = new TemporalId(UUID.fromString(id));
         var cutoff = (asOf == null || asOf.isBlank()) ? null : Instant.parse(asOf);
-
         var list = store.read(entityId).stream()
                 .filter(e -> cutoff == null || !e.observedAt().isAfter(cutoff))
                 .sorted(Comparator.comparing(TemporalEvent::observedAt))
@@ -81,7 +56,8 @@ public class TemporalController {
                         e.type(),
                         e.observedAt(),
                         e.clock().snapshot(),
-                        e.payload()
+                        e.payload(),
+                        e.node()
                 ))
                 .toList();
 
@@ -90,19 +66,15 @@ public class TemporalController {
 
     @GetMapping("/search")
     public ResponseEntity<List<TemporalEvent>> search(
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
-            @RequestParam(required = false) Integer limit,
-            @RequestParam(required = false) String jsonPath,
-            @RequestParam(required = false) String jsonValue
+            @RequestParam(name = "type", required = false) String type,
+            @RequestParam(name = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(name = "to", required = false)   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @RequestParam(name = "limit", required = false) Integer limit,
+            @RequestParam(name = "jsonPath", required = false) String jsonPath,
+            @RequestParam(name = "jsonValue", required = false) String jsonValue
     ) {
-        return ResponseEntity.ok(store.search(type, from, to, limit, jsonPath, jsonValue));
-    }
-
-    /**
-     * Request body for appending an event.
-     */
-    public record AppendReq(String type, Map<String, Object> payload, String node) {
+        return ResponseEntity.ok(
+                store.search(type, from, to, limit, jsonPath, jsonValue)
+        );
     }
 }
