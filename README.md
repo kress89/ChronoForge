@@ -171,3 +171,18 @@ V2__doc_snapshots.sql — table cf_doc_snapshot (GIN on doc)
 
 cf-api profile pg points to:
 jdbc:postgresql://localhost:5432/chronoforge, user cf, pass cf.
+
+
+Roadmap (near-term)
+
+CRDT ops: DOC_ADD/DOC_REM (OR-Set), DOC_INCR (PN-counter)
+
+LISTEN/NOTIFY bridge so SSE works across JVMs
+
+Query v2: JSONPath predicates & pagination
+
+OpenAPI docs with seed/node header hints
+
+Testcontainers IT: migrations, append→project→get, time-travel
+
+Tenancy: header → schema/row scoping
